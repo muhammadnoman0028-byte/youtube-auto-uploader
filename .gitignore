@@ -1,0 +1,37 @@
+# ---- Secrets: never commit ----
+client_secret.json
+client_secret*.json
+!client_secret.example.json
+token.json
+data/
+.env
+.env.*
+
+# ---- Local configuration (user-specific paths/settings) ----
+config.json
+!config.example.json
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Logs & temp ----
+*.log
+*.tmp
+*.part
+*.bak
+
+# ---- OS / editors ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp

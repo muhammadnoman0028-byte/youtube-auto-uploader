@@ -1,0 +1,1126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTube Auto Uploader</title>
+<style>
+  :root {
+    --bg: #070a0f;
+    --bg-glow: #0d1420;
+    --panel: #0e141d;
+    --panel-2: #121a25;
+    --panel-3: #172131;
+    --line: #1e2a3a;
+    --line-soft: #17202d;
+    --text: #e9eff8;
+    --muted: #8b9aaf;
+    --faint: #5d6c80;
+    --accent: #ff4d5e;
+    --accent-soft: rgba(255, 77, 94, .12);
+    --lime: #c1f02a;
+    --green: #38d99a;
+    --green-soft: rgba(56, 217, 154, .12);
+    --amber: #ffb020;
+    --amber-soft: rgba(255, 176, 32, .12);
+    --red: #ff5c6c;
+    --red-soft: rgba(255, 92, 108, .12);
+    --blue: #61a8ff;
+    --blue-soft: rgba(97, 168, 255, .12);
+    --radius: 14px;
+    --shadow: 0 18px 60px rgba(0, 0, 0, .45);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(1100px 600px at 12% -10%, rgba(255, 77, 94, .09), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(193, 240, 42, .05), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font: 14px/1.5 "Segoe UI", Inter, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: #0a1018; border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; font-size: 12px; color: #d9e4f2; }
+  .app { max-width: 1520px; margin: 0 auto; padding: 22px clamp(14px, 3vw, 34px) 60px; }
+
+  /* top bar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    flex-wrap: wrap; padding: 6px 0 22px;
+  }
+  .brand { display: flex; align-items: center; gap: 13px; min-width: 250px; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center;
+    background: linear-gradient(145deg, #ff3347, #b31325); box-shadow: 0 8px 26px rgba(255, 51, 71, .3);
+    font-size: 19px; color: #fff; padding-left: 3px;
+  }
+  .brand h1 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; max-width: 560px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--panel);
+    color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap;
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .pill.ok { color: var(--green); border-color: rgba(56, 217, 154, .28); background: var(--green-soft); }
+  .pill.ok .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .pill.warn { color: var(--amber); border-color: rgba(255, 176, 32, .28); background: var(--amber-soft); }
+  .pill.warn .dot { background: var(--amber); }
+  .pill.live { color: var(--blue); }
+  .pill.live .dot { background: var(--blue); box-shadow: 0 0 10px var(--blue); }
+
+  .btn {
+    appearance: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+    height: 36px; padding: 0 14px; border-radius: 10px; font: inherit; font-weight: 600;
+    font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+    transition: border-color .15s, background .15s, transform .1s;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: #33455d; background: var(--panel-3); }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.primary {
+    background: linear-gradient(145deg, #ff4356, #e21f35); border-color: transparent; color: #fff;
+    box-shadow: 0 8px 24px rgba(255, 67, 86, .26);
+  }
+  .btn.primary:hover { background: linear-gradient(145deg, #ff5b6c, #ef2a40); }
+  .btn.ghost { background: transparent; }
+  .btn.icon { width: 36px; padding: 0; justify-content: center; font-size: 16px; }
+
+  /* auth banner */
+  .banner {
+    border: 1px solid rgba(255, 176, 32, .28); background: linear-gradient(180deg, rgba(255, 176, 32, .09), rgba(255, 176, 32, .03));
+    border-radius: var(--radius); padding: 16px 18px; margin-bottom: 18px;
+  }
+  .banner h3 { margin: 0 0 6px; font-size: 14px; color: var(--amber); }
+  .banner p { margin: 4px 0; color: var(--muted); font-size: 13px; }
+  .banner ol { margin: 8px 0; padding-left: 20px; color: var(--muted); font-size: 13px; }
+  .banner li { margin: 3px 0; }
+  .banner .banner-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  /* stats */
+  .stats {
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px;
+  }
+  .stat {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 13px 15px; min-height: 82px; display: flex; flex-direction: column; justify-content: center;
+  }
+  .stat span { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; }
+  .stat strong { font-size: 24px; letter-spacing: -.03em; line-height: 1.2; margin-top: 3px; }
+  .stat small { color: var(--faint); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat.next { grid-column: span 2; }
+  .stat.next strong { font-size: 15px; line-height: 1.35; letter-spacing: -.01em; }
+
+  /* next panel */
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .16);
+  }
+  .next-panel {
+    display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center;
+    padding: 18px 20px; margin-bottom: 14px; overflow: hidden; position: relative;
+  }
+  .next-panel::before {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--lime));
+  }
+  .eyebrow { color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 800; }
+  .next-title { font-size: 17px; font-weight: 700; margin: 4px 0 3px; letter-spacing: -.01em; }
+  .next-meta { color: var(--muted); font-size: 12.5px; }
+  .countdown {
+    text-align: right; padding-left: 20px; border-left: 1px solid var(--line-soft); min-width: 140px;
+  }
+  .countdown span { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .countdown small { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; }
+  .progress-wrap { grid-column: 1 / -1; }
+  .progress-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .progress { height: 8px; background: #0a1018; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .progress > div { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #ff8a5c); transition: width .3s ease; }
+
+  /* library panel */
+  .library { overflow: hidden; margin-bottom: 14px; }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 13px 16px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap;
+  }
+  .panel-head h2 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tab {
+    border: 1px solid transparent; background: transparent; color: var(--muted); font: inherit;
+    font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 8px; cursor: pointer;
+  }
+  .tab:hover { background: var(--panel-2); color: var(--text); }
+  .tab.active { background: var(--panel-3); border-color: var(--line); color: var(--text); }
+  .tab b { color: var(--faint); font-weight: 700; margin-left: 4px; }
+  .tab.active b { color: var(--muted); }
+  .tools { display: flex; gap: 8px; align-items: center; }
+  input[type="search"], input[type="text"], input[type="date"], input[type="time"], input[type="number"], select, textarea {
+    background: #0a1018; border: 1px solid var(--line); color: var(--text); font: inherit;
+    border-radius: 9px; padding: 8px 10px; outline: none; width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { border-color: #355074; box-shadow: 0 0 0 3px rgba(97, 168, 255, .1); }
+  .tools input[type="search"] { width: 240px; padding: 7px 11px; font-size: 12.5px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 900px; }
+  thead th {
+    text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--faint); font-weight: 800; padding: 10px 14px; border-bottom: 1px solid var(--line-soft);
+    background: rgba(10, 15, 23, .55); position: sticky; top: 0; backdrop-filter: blur(8px);
+  }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255, 255, 255, .015); }
+  .thumb-wrap {
+    width: 104px; height: 58px; border-radius: 8px; border: 1px solid var(--line);
+    background: repeating-linear-gradient(45deg, #101722, #101722 6px, #0c121b 6px, #0c121b 12px);
+    display: grid; place-items: center; overflow: hidden; color: var(--faint); font-size: 17px;
+  }
+  .thumb {
+    width: 104px; height: 58px; object-fit: cover; display: block;
+  }
+  .vtitle { font-weight: 650; font-size: 13.5px; margin-bottom: 3px; max-width: 560px; line-height: 1.35; }
+  .vmeta { color: var(--faint); font-size: 11.5px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .vmeta .sep { color: #2b3a4d; }
+  .vwarn { color: var(--amber); font-size: 11.5px; margin-top: 3px; }
+  .slot-date { font-weight: 650; font-size: 13px; white-space: nowrap; }
+  .slot-time { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+  .slot-upload { color: var(--faint); font-size: 10.5px; white-space: nowrap; margin-top: 2px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 9px;
+    font-size: 11px; font-weight: 700; border: 1px solid transparent; white-space: nowrap;
+    text-transform: capitalize;
+  }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .badge.pending { color: var(--blue); background: var(--blue-soft); border-color: rgba(97, 168, 255, .22); }
+  .badge.uploaded { color: var(--green); background: var(--green-soft); border-color: rgba(56, 217, 154, .22); }
+  .badge.failed { color: var(--red); background: var(--red-soft); border-color: rgba(255, 92, 108, .22); }
+  .badge.uploading { color: var(--lime); background: rgba(193, 240, 42, .1); border-color: rgba(193, 240, 42, .22); }
+  .badge.skipped { color: var(--faint); background: rgba(255, 255, 255, .03); border-color: var(--line); }
+  .badge.missing { color: var(--amber); background: var(--amber-soft); border-color: rgba(255, 176, 32, .22); }
+
+  .row-actions { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+  .mini {
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); font: inherit;
+    font-size: 11.5px; font-weight: 650; border-radius: 7px; padding: 4px 8px; cursor: pointer;
+  }
+  .mini:hover { color: var(--text); border-color: #33455d; background: var(--panel-3); }
+  .mini.accent { color: #ff8c97; border-color: rgba(255, 77, 94, .3); background: var(--accent-soft); }
+  .mini.accent:hover { color: #ffb3ba; }
+  .err-text { color: var(--red); font-size: 11px; max-width: 240px; margin-top: 3px; }
+
+  .empty { padding: 48px 20px; text-align: center; color: var(--muted); }
+  .empty strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+
+  /* logs */
+  .logs { overflow: hidden; }
+  .logs pre {
+    margin: 0; padding: 14px 16px; max-height: 230px; overflow: auto; background: #080d14;
+    font: 12px/1.65 "Cascadia Code", Consolas, monospace; color: #9fb0c5; white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .logs.collapsed pre { display: none; }
+  .log-line .t { color: #4b5d73; }
+  .log-line.error { color: #ff8c97; }
+  .log-line.success { color: #6fe3b6; }
+  .log-line.info { color: #9fb0c5; }
+
+  /* dialogs */
+  dialog {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 16px;
+    padding: 0; width: min(680px, calc(100vw - 28px)); box-shadow: var(--shadow);
+  }
+  dialog::backdrop { background: rgba(2, 5, 9, .72); backdrop-filter: blur(4px); }
+  .dialog-head {
+    display: flex; align-items: center; justify-content: space-between; padding: 16px 20px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .dialog-head h2 { margin: 0; font-size: 16px; }
+  .dialog-body { padding: 18px 20px; max-height: min(70vh, 640px); overflow: auto; }
+  .dialog-foot {
+    display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px;
+    border-top: 1px solid var(--line-soft); background: rgba(10, 15, 23, .4);
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .field small { color: var(--faint); font-size: 11px; }
+  .check-row { display: flex; gap: 16px; flex-wrap: wrap; padding-top: 5px; }
+  .check { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12.5px; }
+  .check input { width: auto; accent-color: var(--accent); }
+  .weekdays { display: flex; gap: 6px; flex-wrap: wrap; }
+  .weekdays label {
+    display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line);
+    border-radius: 8px; padding: 5px 9px; font-size: 12px; color: var(--muted);
+    text-transform: none; letter-spacing: 0; cursor: pointer; background: #0a1018;
+  }
+  .weekdays input { width: auto; accent-color: var(--accent); }
+  .hint { color: var(--faint); font-size: 11.5px; margin-top: 10px; }
+
+  /* toasts */
+  #toasts { position: fixed; right: 18px; bottom: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 100; max-width: 380px; }
+  .toast {
+    background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--blue);
+    border-radius: 10px; padding: 11px 14px; box-shadow: var(--shadow); color: var(--text);
+    font-size: 13px; animation: slide .2s ease;
+  }
+  .toast.success { border-left-color: var(--green); }
+  .toast.error { border-left-color: var(--red); }
+  .toast.warn { border-left-color: var(--amber); }
+  .toast small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  @keyframes slide { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 1150px) {
+    .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .stat.next { grid-column: span 3; }
+  }
+  @media (max-width: 720px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stat.next { grid-column: span 2; }
+    .next-panel { grid-template-columns: 1fr; }
+    .countdown { text-align: left; border-left: none; padding-left: 0; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .tools input[type="search"] { width: 100%; }
+    .top-actions { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">▶</div>
+      <div>
+        <h1>YouTube Auto Uploader</h1>
+        <p id="libraryPath">Loading library…</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="authPill" class="pill"><span class="dot"></span> Checking…</span>
+      <span id="wsPill" class="pill live"><span class="dot"></span> live</span>
+      <button class="btn" id="btnScan" title="Re-read the downloader folders">Scan library</button>
+      <button class="btn primary" id="btnPlan">Schedule all</button>
+      <button class="btn" id="btnUpload">Upload due</button>
+      <button class="btn icon" id="btnSettings" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <div id="authBanner" class="banner hidden">
+    <h3>YouTube authorization required</h3>
+    <p id="authMessage"></p>
+    <ol>
+      <li>In Google Cloud, enable <b>YouTube Data API v3</b> and configure the OAuth consent screen.</li>
+      <li>Create an OAuth client of type <b>Desktop app</b>, download the JSON and save it as <code>client_secret.json</code> in this project.</li>
+      <li>Open a terminal in the project and run <code>python main.py auth</code>.</li>
+    </ol>
+    <div class="banner-actions">
+      <button class="btn" id="btnRecheckAuth">Recheck authorization</button>
+    </div>
+  </div>
+
+  <section class="stats">
+    <div class="stat"><span>Total</span><strong id="statTotal">0</strong><small>videos in library</small></div>
+    <div class="stat"><span>Scheduled</span><strong id="statScheduled">0</strong><small>queued for a day</small></div>
+    <div class="stat"><span>Uploaded</span><strong id="statUploaded">0</strong><small>on YouTube</small></div>
+    <div class="stat"><span>Attention</span><strong id="statAttention">0</strong><small>failed or missing</small></div>
+    <div class="stat"><span>Today</span><strong id="statToday">0/1</strong><small>uploads used</small></div>
+    <div class="stat next"><span>Next publish</span><strong id="statNext">—</strong><small id="statNextSub"></small></div>
+  </section>
+
+  <section class="panel next-panel">
+    <div>
+      <div class="eyebrow">Up next</div>
+      <div id="nextTitle" class="next-title">Nothing scheduled</div>
+      <div id="nextMeta" class="next-meta">Scan the library, then use “Schedule all”.</div>
+    </div>
+    <div class="countdown">
+      <span id="nextCountdown">—</span>
+      <small>until upload</small>
+    </div>
+    <div class="progress-wrap hidden" id="progressWrap">
+      <div class="progress-head"><span id="progressTitle">Uploading…</span><span id="progressPct">0%</span></div>
+      <div class="progress"><div id="progressBar"></div></div>
+    </div>
+  </section>
+
+  <section class="panel library">
+    <div class="panel-head">
+      <div class="tabs" id="filterTabs">
+        <button class="tab active" data-filter="all">All <b id="countAll">0</b></button>
+        <button class="tab" data-filter="pending">Scheduled <b id="countPending">0</b></button>
+        <button class="tab" data-filter="uploaded">Uploaded <b id="countUploaded">0</b></button>
+        <button class="tab" data-filter="failed">Failed <b id="countFailed">0</b></button>
+        <button class="tab" data-filter="skipped">Skipped <b id="countSkipped">0</b></button>
+        <button class="tab" data-filter="missing">Missing <b id="countMissing">0</b></button>
+      </div>
+      <div class="tools">
+        <input type="search" id="search" placeholder="Search titles or folders…" autocomplete="off">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:120px">Thumbnail</th>
+            <th>Video</th>
+            <th style="width:150px">Publish slot</th>
+            <th style="width:110px">Status</th>
+            <th style="width:210px; text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="videoRows"></tbody>
+      </table>
+      <div id="emptyState" class="empty hidden">
+        <strong>No videos match this view</strong>
+        Scan the library or clear the search/filter.
+      </div>
+    </div>
+  </section>
+
+  <section class="panel logs" id="logPanel">
+    <div class="panel-head">
+      <h2>Activity</h2>
+      <button class="btn ghost" id="btnLogsToggle">Hide</button>
+    </div>
+    <pre id="logBox">Loading activity…</pre>
+  </section>
+</div>
+
+<dialog id="settingsDialog">
+  <form method="dialog" id="settingsForm">
+    <div class="dialog-head">
+      <h2>Settings</h2>
+      <button class="btn icon ghost" value="cancel" formnovalidate title="Close">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="setLibrary">Library folder</label>
+          <input type="text" id="setLibrary" spellcheck="false">
+          <small>Each sub-folder with a finished video becomes one upload.</small>
+        </div>
+        <div class="field">
+          <label for="setTimezone">Timezone</label>
+          <input type="text" id="setTimezone" spellcheck="false" placeholder="local or Europe/Paris">
+        </div>
+        <div class="field">
+          <label for="setCategory">Category</label>
+          <select id="setCategory">
+            <option value="22">People &amp; Blogs</option>
+            <option value="27">Education</option>
+            <option value="26">Howto &amp; Style</option>
+            <option value="24">Entertainment</option>
+            <option value="28">Science &amp; Technology</option>
+            <option value="25">News &amp; Politics</option>
+            <option value="19">Travel &amp; Events</option>
+            <option value="15">Pets &amp; Animals</option>
+            <option value="17">Sports</option>
+            <option value="10">Music</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="setWindowStart">Publish window opens</label>
+          <input type="time" id="setWindowStart">
+        </div>
+        <div class="field">
+          <label for="setWindowEnd">Publish window closes</label>
+          <input type="time" id="setWindowEnd">
+        </div>
+        <div class="field">
+          <label for="setLead">Upload lead (minutes)</label>
+          <input type="number" id="setLead" min="5" max="720" step="5">
+          <small>How early to upload before the publish time.</small>
+        </div>
+        <div class="field">
+          <label for="setMaxDay">Max uploads per day</label>
+          <input type="number" id="setMaxDay" min="1" max="6" step="1">
+        </div>
+        <div class="field">
+          <label for="setPlaylist">Playlist ID (optional)</label>
+          <input type="text" id="setPlaylist" spellcheck="false" placeholder="PL…">
+        </div>
+        <div class="field">
+          <label for="setMaxTags">Max tags per video</label>
+          <input type="number" id="setMaxTags" min="1" max="60" step="1">
+        </div>
+        <div class="field full">
+          <label for="setExtraTags">Extra tags (comma separated)</label>
+          <input type="text" id="setExtraTags" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="setTitlePrefix">Title prefix</label>
+          <input type="text" id="setTitlePrefix">
+        </div>
+        <div class="field">
+          <label for="setTitleSuffix">Title suffix</label>
+          <input type="text" id="setTitleSuffix">
+        </div>
+        <div class="field full">
+          <label for="setFooter">Description footer</label>
+          <textarea id="setFooter" rows="3" placeholder="Optional text appended to every description"></textarea>
+        </div>
+        <div class="field">
+          <label for="setMissed">If a slot is missed</label>
+          <select id="setMissed">
+            <option value="reschedule">Move it to the next free day</option>
+            <option value="publish_now">Upload it publicly immediately</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Skip weekdays</label>
+          <div class="weekdays" id="setWeekdays">
+            <label><input type="checkbox" value="0">Mon</label>
+            <label><input type="checkbox" value="1">Tue</label>
+            <label><input type="checkbox" value="2">Wed</label>
+            <label><input type="checkbox" value="3">Thu</label>
+            <label><input type="checkbox" value="4">Fri</label>
+            <label><input type="checkbox" value="5">Sat</label>
+            <label><input type="checkbox" value="6">Sun</label>
+          </div>
+        </div>
+        <div class="field full">
+          <label>Upload options</label>
+          <div class="check-row">
+            <label class="check"><input type="checkbox" id="setKids"> Made for kids</label>
+            <label class="check"><input type="checkbox" id="setNotify"> Notify subscribers</label>
+          </div>
+        </div>
+      </div>
+      <div class="hint">Window, tags, title and footer changes apply on the next scan. Use “Save &amp; re-plan” to rebuild all pending slots with the new window.</div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn" id="btnSavePlan" value="save-plan">Save &amp; re-plan</button>
+      <button class="btn primary" id="btnSaveSettings" value="save">Save settings</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="rescheduleDialog">
+  <form method="dialog" id="rescheduleForm">
+    <div class="dialog-head">
+      <h2>Move video</h2>
+      <button class="btn icon ghost" value="cancel" formnovalidate title="Close">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div class="field full">
+        <label>Video</label>
+        <div id="rescheduleTitle" class="next-title" style="font-size:14px"></div>
+      </div>
+      <div class="form-grid" style="margin-top:14px">
+        <div class="field">
+          <label for="rescheduleDate">New date</label>
+          <input type="date" id="rescheduleDate" required>
+        </div>
+        <div class="field">
+          <label for="rescheduleTime">Publish time (optional)</label>
+          <input type="time" id="rescheduleTime">
+          <small>Leave empty for a random minute inside the configured window.</small>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn primary" id="btnSaveReschedule" value="save">Move video</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toasts"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const state = { data: null, filter: "all", search: "", selectedFolder: null, logs: [] };
+  const $ = (id) => document.getElementById(id);
+  const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+
+  async function api(path, options = {}) {
+    const response = await fetch(path, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.detail || response.statusText || "Request failed");
+    }
+    return data;
+  }
+
+  function toast(message, detail = "", kind = "info", ttl = 5000) {
+    const node = document.createElement("div");
+    node.className = "toast " + kind;
+    const text = document.createElement("div");
+    text.textContent = message;
+    node.appendChild(text);
+    if (detail) {
+      const small = document.createElement("small");
+      small.textContent = detail;
+      node.appendChild(small);
+    }
+    $("toasts").appendChild(node);
+    setTimeout(() => {
+      node.style.opacity = "0";
+      node.style.transition = "opacity .25s";
+      setTimeout(() => node.remove(), 300);
+    }, ttl);
+  }
+
+  const fmtDateTime = (iso) => {
+    if (!iso) return "—";
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return "—";
+    return date.toLocaleString(undefined, {
+      weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+  };
+
+  const fmtSlot = (video) => {
+    if (!video || !video.slot_date) return "Not scheduled";
+    const date = new Date(video.slot_date + "T00:00:00");
+    const day = date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    return day + (video.publish_time_local ? " · " + video.publish_time_local : "");
+  };
+
+  function fmtRelative(iso) {
+    if (!iso) return "—";
+    const target = new Date(iso).getTime();
+    if (isNaN(target)) return "—";
+    const diff = target - Date.now();
+    const abs = Math.abs(diff);
+    const mins = Math.round(abs / 60000);
+    const label = mins < 60
+      ? mins + " min"
+      : mins < 1440
+        ? Math.round(mins / 60) + " h"
+        : Math.round(mins / 1440) + " d";
+    return diff >= 0 ? "in " + label : label + " ago";
+  }
+
+  function updateCountdown() {
+    const next = state.data?.summary?.next;
+    const node = $("nextCountdown");
+    if (!next) { node.textContent = "—"; return; }
+    const uploadAt = state.data?.summary?.next_upload_at;
+    if (!uploadAt) { node.textContent = "—"; return; }
+    const diff = new Date(uploadAt).getTime() - Date.now();
+    if (diff <= 0) { node.textContent = "due now"; return; }
+    const mins = Math.floor(diff / 60000);
+    const days = Math.floor(mins / 1440);
+    const hours = Math.floor((mins % 1440) / 60);
+    const rem = mins % 60;
+    node.textContent = days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${rem}m` : `${rem}m`;
+  }
+
+  function renderAuth() {
+    const auth = state.data?.auth || {};
+    const pill = $("authPill");
+    pill.className = "pill " + (auth.authorized ? "ok" : "warn");
+    pill.innerHTML = `<span class="dot"></span> ${auth.authorized ? "YouTube connected" : "Auth required"}`;
+    $("authBanner").classList.toggle("hidden", !!auth.authorized);
+    $("authMessage").textContent = auth.message || "";
+  }
+
+  function renderStats() {
+    const summary = state.data?.summary || {};
+    $("statTotal").textContent = summary.total ?? 0;
+    $("statScheduled").textContent = summary.scheduled ?? 0;
+    $("statUploaded").textContent = summary.uploaded ?? 0;
+    $("statAttention").textContent = (summary.failed || 0) + (summary.missing || 0);
+    $("statToday").textContent = `${summary.uploads_today ?? 0}/${summary.max_uploads_per_day ?? 1}`;
+
+    const next = summary.next;
+    if (next) {
+      $("statNext").textContent = fmtSlot(next);
+      $("statNextSub").textContent = next.title || "";
+      $("nextTitle").textContent = next.title || "Untitled";
+      $("nextMeta").textContent = `${fmtSlot(next)} · publishes ${fmtDateTime(next.publish_at)} · ${next.duration_human || ""}`;
+    } else {
+      $("statNext").textContent = "—";
+      $("statNextSub").textContent = "nothing scheduled";
+      $("nextTitle").textContent = "Nothing scheduled";
+      $("nextMeta").textContent = summary.total
+        ? "Use “Schedule all” to assign one video per day."
+        : "Scan the library to pick up downloader folders.";
+    }
+
+    $("countAll").textContent = summary.total ?? 0;
+    $("countPending").textContent = summary.scheduled ?? 0;
+    $("countUploaded").textContent = summary.uploaded ?? 0;
+    $("countFailed").textContent = summary.failed ?? 0;
+    $("countSkipped").textContent = summary.skipped ?? 0;
+    $("countMissing").textContent = summary.missing ?? 0;
+    $("libraryPath").textContent = summary.library_dir || "";
+    $("libraryPath").title = summary.library_dir || "";
+  }
+
+  function rowFor(video) {
+    const status = video.status || "pending";
+    const thumb = `<div class="thumb-wrap">` + (video.has_thumbnail
+      ? `<img class="thumb" loading="lazy" alt="" src="/api/v1/thumbnail?folder=${encodeURIComponent(video.folder)}" onerror="this.style.display='none'">`
+      : "▶") + `</div>`;
+
+    const warnings = (video.warnings || []);
+    const warningLine = warnings.length
+      ? `<div class="vwarn" title="${esc(warnings.join("\\n"))}">⚠ ${warnings.length} preflight note${warnings.length > 1 ? "s" : ""}</div>`
+      : "";
+
+    const meta = [
+      video.source_date ? "source " + esc(video.source_date) : "",
+      video.duration_human || "",
+      video.video_size_human || "",
+      video.source_id ? "ID " + esc(video.source_id) : "",
+    ].filter(Boolean);
+
+    let actions = "";
+    const buttons = [];
+    if (status === "uploaded") {
+      buttons.push(video.youtube_url
+        ? `<a class="mini" href="${esc(video.youtube_url)}" target="_blank" rel="noopener">YouTube ↗</a>`
+        : `<span class="mini">${esc(video.youtube_id || "uploaded")}</span>`);
+    } else if (status === "missing") {
+      buttons.push(`<button class="mini" data-act="scan" data-folder="${esc(video.folder)}">Rescan</button>`);
+    } else {
+      if (status !== "uploading") {
+        buttons.push(`<button class="mini accent" data-act="upload" data-folder="${esc(video.folder)}">Upload now</button>`);
+      }
+      if (status === "failed" || status === "skipped") {
+        buttons.push(`<button class="mini" data-act="retry" data-folder="${esc(video.folder)}">${status === "failed" ? "Retry" : "Restore"}</button>`);
+      }
+      buttons.push(`<button class="mini" data-act="reschedule" data-folder="${esc(video.folder)}">Move</button>`);
+      if (status !== "uploading") {
+        buttons.push(`<button class="mini" data-act="skip" data-folder="${esc(video.folder)}">Skip</button>`);
+      }
+    }
+    actions = `<div class="row-actions">${buttons.join("")}</div>`;
+
+    const error = video.last_error ? `<div class="err-text" title="${esc(video.last_error)}">${esc(video.last_error.slice(0, 140))}</div>` : "";
+    const note = video.note ? `<div class="vwarn" title="${esc(video.note)}">${esc(video.note)}</div>` : "";
+    let uploadAt = "";
+    if (video.publish_at && state.data?.config) {
+      if (status === "uploaded") {
+        const live = new Date(video.publish_at).getTime() > Date.now();
+        uploadAt = `<div class="slot-upload">${live ? "goes live" : "published"} ${esc(fmtRelative(video.publish_at))}</div>`;
+      } else {
+        const at = new Date(new Date(video.publish_at).getTime() - (state.data.config.upload_lead_minutes || 90) * 60000).toISOString();
+        uploadAt = `<div class="slot-upload">upload ${esc(fmtRelative(at))}</div>`;
+      }
+    }
+
+    const statusLabel = status === "uploading"
+      ? `<span class="spin">◌</span> uploading`
+      : esc(status);
+
+    return `<tr>
+      <td>${thumb}</td>
+      <td>
+        <div class="vtitle">${esc(video.title || video.folder)}</div>
+        <div class="vmeta">${meta.join('<span class="sep">·</span>')}</div>
+        ${warningLine}${error}${note}
+      </td>
+      <td>
+        <div class="slot-date">${esc(fmtSlot(video))}</div>
+        <div class="slot-time">${video.publish_at ? esc(fmtDateTime(video.publish_at)) : "—"}</div>
+        ${uploadAt}
+      </td>
+      <td><span class="badge ${esc(status)}">${statusLabel}</span></td>
+      <td>${actions}</td>
+    </tr>`;
+  }
+
+  function renderRows() {
+    const videos = state.data?.videos || [];
+    const query = state.search.trim().toLowerCase();
+    const filtered = videos.filter((video) => {
+      if (state.filter !== "all" && video.status !== state.filter) return false;
+      if (!query) return true;
+      return String(video.title || "").toLowerCase().includes(query)
+        || String(video.folder || "").toLowerCase().includes(query);
+    });
+    $("videoRows").innerHTML = filtered.map(rowFor).join("");
+    $("emptyState").classList.toggle("hidden", filtered.length > 0);
+    document.querySelectorAll("#filterTabs .tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.filter === state.filter);
+    });
+  }
+
+  function renderAll() {
+    renderAuth();
+    renderStats();
+    renderRows();
+    updateCountdown();
+  }
+
+  async function refresh() {
+    try {
+      state.data = await api("/api/v1/state");
+      renderAll();
+    } catch (error) {
+      toast("Could not load state", error.message, "error");
+    }
+  }
+
+  function findVideo(folder) {
+    return (state.data?.videos || []).find((video) => video.folder === folder);
+  }
+
+  async function doScan() {
+    const button = $("btnScan");
+    button.disabled = true;
+    button.textContent = "Scanning…";
+    try {
+      const result = await api("/api/v1/scan", { method: "POST" });
+      const summary = result.summary || {};
+      toast("Library scanned", `${summary.total || 0} videos found · ${summary.unscheduled || 0} unscheduled`, "success");
+      await refresh();
+    } catch (error) {
+      toast("Scan failed", error.message, "error");
+    } finally {
+      button.disabled = false;
+      button.textContent = "Scan library";
+    }
+  }
+
+  async function doPlan(reset = false) {
+    const unscheduled = state.data?.summary?.unscheduled ?? 0;
+    const total = state.data?.summary?.total ?? 0;
+    const windowText = (state.data?.config?.publish_window_start || "20:00") + "–" + (state.data?.config?.publish_window_end || "21:00");
+    const question = reset
+      ? "Rebuild every pending slot with one video per day inside " + windowText + "?"
+      : `Schedule ${unscheduled || "all unscheduled"} video(s), one per day inside ${windowText}?`;
+    if (!confirm(question)) return;
+    const button = $("btnPlan");
+    button.disabled = true;
+    button.textContent = "Scheduling…";
+    try {
+      const result = await api("/api/v1/plan", {
+        method: "POST",
+        body: JSON.stringify({ reset }),
+      });
+      toast("Schedule created", `${result.assigned} slot(s) assigned · ${total} videos tracked`, "success");
+      await refresh();
+    } catch (error) {
+      toast("Scheduling failed", error.message, "error");
+    } finally {
+      button.disabled = false;
+      button.textContent = "Schedule all";
+    }
+  }
+
+  async function uploadNext() {
+    try {
+      const result = await api("/api/v1/upload", { method: "POST", body: JSON.stringify({}) });
+      toast("Uploader started", "The next due video is being uploaded…", "info");
+      if (result.dry_run) toast("Dry run only", "No upload was sent.", "warn");
+    } catch (error) {
+      toast("Upload not started", error.message, "error");
+    }
+  }
+
+  async function uploadOne(folder) {
+    const video = findVideo(folder);
+    if (!video) return;
+    const when = video.publish_at ? fmtDateTime(video.publish_at) : "immediately";
+    if (!confirm(`Upload “${video.title}” now?\n\nPublish: ${when}`)) return;
+    try {
+      await api("/api/v1/upload", {
+        method: "POST",
+        body: JSON.stringify({ folder }),
+      });
+      toast("Upload started", video.title, "info");
+    } catch (error) {
+      toast("Upload not started", error.message, "error");
+    }
+  }
+
+  async function reschedule(folder) {
+    const video = findVideo(folder);
+    if (!video) return;
+    state.selectedFolder = folder;
+    $("rescheduleTitle").textContent = video.title || folder;
+    $("rescheduleDate").value = video.slot_date || new Date().toISOString().slice(0, 10);
+    $("rescheduleTime").value = video.publish_time_local || "";
+    $("rescheduleDate").min = new Date().toISOString().slice(0, 10);
+    $("rescheduleDialog").showModal();
+  }
+
+  async function skip(folder) {
+    const video = findVideo(folder);
+    if (!video || !confirm(`Skip “${video.title}”?`)) return;
+    try {
+      await api("/api/v1/skip", { method: "POST", body: JSON.stringify({ folder }) });
+      toast("Skipped", video.title, "warn");
+      await refresh();
+    } catch (error) {
+      toast("Could not skip", error.message, "error");
+    }
+  }
+
+  async function retry(folder) {
+    const video = findVideo(folder);
+    if (!video) return;
+    try {
+      await api("/api/v1/retry", { method: "POST", body: JSON.stringify({ folder }) });
+      toast("Queued again", video.title, "success");
+      await refresh();
+    } catch (error) {
+      toast("Could not restore", error.message, "error");
+    }
+  }
+
+  function showProgress(title) {
+    $("progressWrap").classList.remove("hidden");
+    $("progressTitle").textContent = title || "Uploading…";
+    $("progressPct").textContent = "0%";
+    $("progressBar").style.width = "0%";
+  }
+
+  function hideProgressSoon() {
+    setTimeout(() => $("progressWrap").classList.add("hidden"), 2500);
+  }
+
+  function addLog(message, level = "info") {
+    const now = new Date();
+    const stamp = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    state.logs.push({ stamp, message, level });
+    if (state.logs.length > 400) state.logs.shift();
+    renderLogs();
+  }
+
+  function renderLogs() {
+    const box = $("logBox");
+    box.innerHTML = state.logs.map((line) =>
+      `<span class="log-line ${esc(line.level)}"><span class="t">${esc(line.stamp)}</span>  ${esc(line.message)}</span>`
+    ).join("\n");
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function loadLogs() {
+    try {
+      const data = await api("/api/v1/logs?limit=120");
+      state.logs = (data.lines || []).map((raw) => {
+        const match = raw.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+\s+(\w+)\s+([^:]+):\s*(.*)$/);
+        if (match) {
+          return { stamp: match[1].slice(11), level: match[2].toLowerCase(), message: match[3] + ": " + match[4] };
+        }
+        return { stamp: "", level: "info", message: raw };
+      });
+      renderLogs();
+    } catch (error) {
+      $("logBox").textContent = "Could not load activity: " + error.message;
+    }
+  }
+
+  function connectWS() {
+    const protocol = location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${protocol}://${location.host}/ws/progress`);
+    const pill = $("wsPill");
+    socket.onopen = () => {
+      pill.className = "pill live";
+      pill.innerHTML = '<span class="dot"></span> live';
+    };
+    socket.onclose = () => {
+      pill.className = "pill";
+      pill.innerHTML = '<span class="dot"></span> reconnecting…';
+      setTimeout(connectWS, 3000);
+    };
+    socket.onerror = () => socket.close();
+    socket.onmessage = (event) => {
+      let frame;
+      try { frame = JSON.parse(event.data); } catch (_) { return; }
+      if (frame.event === "upload_start") {
+        showProgress(`Uploading ${frame.title || frame.folder || ""}…`);
+        addLog(`Uploading ${frame.folder} → ${frame.publish_at || "publish now"}`, "info");
+      } else if (frame.event === "upload_progress") {
+        const percent = Number(frame.percent || 0);
+        $("progressBar").style.width = percent + "%";
+        $("progressPct").textContent = percent.toFixed(1) + "%";
+      } else if (frame.event === "upload_done") {
+        $("progressBar").style.width = "100%";
+        $("progressPct").textContent = "100%";
+        toast("Upload complete", frame.title || frame.folder, "success");
+        addLog(`Uploaded ${frame.title || frame.folder} → ${frame.url || ""}`, "success");
+        hideProgressSoon();
+        refresh();
+      } else if (frame.event === "upload_error") {
+        toast("Upload failed", frame.error || "Unknown error", "error", 9000);
+        addLog(`Upload failed: ${frame.error || ""}`, "error");
+        hideProgressSoon();
+        refresh();
+      } else if (frame.event === "upload_result") {
+        if (frame.status === "idle") toast("Nothing due", frame.message || "", "warn");
+        else if (frame.status === "daily_limit") toast("Daily limit reached", frame.message || "", "warn");
+        else if (frame.status === "auth_required") toast("Authorization required", "Run: python main.py auth", "error", 9000);
+        else if (frame.status === "busy") toast("Uploader busy", frame.message || "", "warn");
+        else if (frame.status === "dry_run") toast("Dry run complete", frame.folder || "", "success");
+        else if (frame.status === "error") toast("Upload failed", frame.error || "", "error", 9000);
+        refresh();
+      } else if (frame.event === "log") {
+        addLog(frame.message || "", frame.level || "info");
+      } else if (frame.event === "state") {
+        refresh();
+      }
+    };
+    setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) socket.send("ping");
+    }, 20000);
+  }
+
+  function openSettings() {
+    const cfg = state.data?.config || {};
+    $("setLibrary").value = cfg.library_dir || "";
+    $("setTimezone").value = cfg.timezone || "local";
+    const categorySelect = $("setCategory");
+    const category = String(cfg.category_id || "22");
+    if (![...categorySelect.options].some((option) => option.value === category)) {
+      const option = document.createElement("option");
+      option.value = category;
+      option.textContent = "Category " + category;
+      categorySelect.appendChild(option);
+    }
+    categorySelect.value = category;
+    $("setWindowStart").value = cfg.publish_window_start || "20:00";
+    $("setWindowEnd").value = cfg.publish_window_end || "21:00";
+    $("setLead").value = cfg.upload_lead_minutes ?? 90;
+    $("setMaxDay").value = cfg.max_uploads_per_day ?? 1;
+    $("setPlaylist").value = cfg.playlist_id || "";
+    $("setMaxTags").value = cfg.max_tags ?? 15;
+    $("setExtraTags").value = (cfg.extra_tags || []).join(", ");
+    $("setTitlePrefix").value = cfg.title_prefix || "";
+    $("setTitleSuffix").value = cfg.title_suffix || "";
+    $("setFooter").value = cfg.description_footer || "";
+    $("setMissed").value = cfg.missed_policy || "reschedule";
+    $("setKids").checked = !!cfg.made_for_kids;
+    $("setNotify").checked = !!cfg.notify_subscribers;
+    const skip = new Set((cfg.skip_weekdays || []).map(Number));
+    $("setWeekdays").querySelectorAll("input").forEach((input) => {
+      input.checked = skip.has(Number(input.value));
+    });
+    $("settingsDialog").showModal();
+  }
+
+  function settingsPayload() {
+    const skip = [...$("setWeekdays").querySelectorAll("input:checked")].map((input) => Number(input.value));
+    return {
+      library_dir: $("setLibrary").value.trim(),
+      timezone: $("setTimezone").value.trim() || "local",
+      category_id: $("setCategory").value,
+      publish_window_start: $("setWindowStart").value || "20:00",
+      publish_window_end: $("setWindowEnd").value || "21:00",
+      upload_lead_minutes: Number($("setLead").value) || 90,
+      max_uploads_per_day: Number($("setMaxDay").value) || 1,
+      playlist_id: $("setPlaylist").value.trim(),
+      max_tags: Number($("setMaxTags").value) || 15,
+      extra_tags: $("setExtraTags").value,
+      title_prefix: $("setTitlePrefix").value,
+      title_suffix: $("setTitleSuffix").value,
+      description_footer: $("setFooter").value,
+      missed_policy: $("setMissed").value,
+      made_for_kids: $("setKids").checked,
+      notify_subscribers: $("setNotify").checked,
+      skip_weekdays: skip,
+    };
+  }
+
+  async function saveSettings(replan) {
+    try {
+      await api("/api/v1/settings", { method: "POST", body: JSON.stringify(settingsPayload()) });
+      $("settingsDialog").close();
+      toast("Settings saved", replan ? "Rebuilding the schedule…" : "", "success");
+      await refresh();
+      if (replan) await doPlan(true);
+    } catch (error) {
+      toast("Could not save settings", error.message, "error");
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    $("btnScan").addEventListener("click", doScan);
+    $("btnPlan").addEventListener("click", () => doPlan(false));
+    $("btnUpload").addEventListener("click", uploadNext);
+    $("btnSettings").addEventListener("click", openSettings);
+    $("btnRecheckAuth").addEventListener("click", refresh);
+    $("btnLogsToggle").addEventListener("click", () => {
+      const panel = $("logPanel");
+      panel.classList.toggle("collapsed");
+      $("btnLogsToggle").textContent = panel.classList.contains("collapsed") ? "Show" : "Hide";
+    });
+    $("search").addEventListener("input", (event) => {
+      state.search = event.target.value;
+      renderRows();
+    });
+    $("filterTabs").addEventListener("click", (event) => {
+      const tab = event.target.closest(".tab");
+      if (!tab) return;
+      state.filter = tab.dataset.filter;
+      renderRows();
+    });
+    $("videoRows").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-act]");
+      if (!button) return;
+      const folder = button.dataset.folder;
+      const action = button.dataset.act;
+      if (action === "upload") uploadOne(folder);
+      else if (action === "reschedule") reschedule(folder);
+      else if (action === "skip") skip(folder);
+      else if (action === "retry") retry(folder);
+      else if (action === "scan") doScan();
+    });
+    $("btnSaveSettings").addEventListener("click", (event) => {
+      event.preventDefault();
+      saveSettings(false);
+    });
+    $("btnSavePlan").addEventListener("click", (event) => {
+      event.preventDefault();
+      saveSettings(true);
+    });
+    $("settingsForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveSettings(false);
+    });
+    $("rescheduleForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const folder = state.selectedFolder;
+      if (!folder) return;
+      try {
+        await api("/api/v1/reschedule", {
+          method: "POST",
+          body: JSON.stringify({
+            folder,
+            date: $("rescheduleDate").value,
+            time: $("rescheduleTime").value || null,
+          }),
+        });
+        $("rescheduleDialog").close();
+        toast("Video moved", fmtSlot(findVideo(folder) || {}), "success");
+        await refresh();
+      } catch (error) {
+        toast("Could not move video", error.message, "error");
+      }
+    });
+
+    refresh();
+    loadLogs();
+    connectWS();
+    setInterval(updateCountdown, 1000);
+    setInterval(refresh, 30000);
+  });
+})();
+</script>
+</body>
+</html>
